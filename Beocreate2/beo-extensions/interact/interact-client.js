@@ -274,7 +274,14 @@ function listTriggersAndActions() {
 				icon: extensions.interact.assetPath+"/symbols-black/http-api.svg", 
 				setup: function(data) { httpAPISetup("received", "setup", data) }, 
 				preview: function(data) { return httpAPISetup("received", "preview", data) }
+			},
+			GPIO: {
+				name: "GPIO Request Received",
+				icon: extensions.interact.assetPath+"/symbols-black/gpio.svg", 
+				setup: function(data) { GPIOSetup("received", "setup", data) }, 
+				preview: function(data) { return GPIOSetup("received", "preview", data) }
 			}
+			
 		}
 		
 		for (extension in extensions) {
@@ -782,6 +789,45 @@ function httpAPISetup(type, stage, data) {
 	}
 }
 
+pinNumber = null;
+function GPIOSetup(type, stage, data) {
+	switch (stage) {
+		case "setup":
+			beo.ask("gpio-input-setup");
+			if (data && data.pinNumber) {
+				$("#gpio-input-received-pin").text(data.pinNumber).removeClass("light");
+				$("#gpio-input-received-pin-set").text(data.pinNumber).removeClass("button");
+				pinNumber = parseInt(data.pinNumber);
+			} else {
+				$("#gpio-input-received-pin").text("???").addClass("light");
+				$("#gpio-input-received-pin-set").text("Set...").addClass("button");
+				pinNumber = null;
+			}
+			if (pinNumber) $("#gpio-input-save").addClass("disabled");
+			break;
+		case "set":
+			beo.startTextInput(1, "Set GPIO pin number", 
+				"Enter the number of the GPIO you want to activate this action.", 
+				{text: pinNumber, placeholders: {text: "Number"}}, function(input) {
+				// Validate and store input.
+				if (input && input.text) {
+					pinNumber = input.text;
+					$("#gpio-input-received-pin").text(input.text).removeClass("light");
+					$("#gpio-input-received-pin-set").text(input.text).removeClass("button");
+					if (pinNumber) $("#gpio-input-save").removeClass("disabled");
+				}
+			});
+			break;
+		case "save":
+			beo.ask();
+			saveTrigger("interact", "GPIO", {pinNumber: pinNumber});
+			break;
+		case "preview":
+			return "Activate GPIO pin number "+data.pinNumber;
+			break;
+	}
+}
+
 
 return {
 	enableInteractions: enableInteractions,
@@ -803,7 +849,8 @@ return {
 	serialReceive: serialReceive,
 	serialSend: serialSend,
 	selectSerialPort: selectSerialPort,
-	httpAPISetup: httpAPISetup
+	httpAPISetup: httpAPISetup,
+	GPIOSetup: GPIOSetup
 }
 	
 })();

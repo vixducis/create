@@ -23,6 +23,7 @@ SOFTWARE.*/
 var version = require("./package.json").version;
 var SerialPort = require('serialport'); // For communicating through serial ports.
 var Readline = SerialPort.parsers.Readline; // For parsing with newline.
+var Gpio = require('onoff').Gpio;
 
 var debug = beo.debug;
 
@@ -36,10 +37,10 @@ var settings = JSON.parse(JSON.stringify(defaultSettings));
 
 beo.bus.on('general', function(event) {
 	
-	
 	if (event.header == "startup") {
 		
 		getAllTriggersAndActions();
+		processGpioTriggers();
 		
 	}
 	
@@ -144,6 +145,7 @@ beo.bus.on('interact', function(event) {
 		runTrigger("interact", "httpAPI", {addressEnd: event.content.extra, body: event.content.body});
 	}
 	
+	processGpioTriggers();
 });
 
 function sendSerialPortList() {
@@ -245,6 +247,17 @@ var allTriggers = {
 		},
 		httpAPI: function(data, interactData) {
 			if (data.addressEnd && data.addressEnd == interactData.addressEnd) {
+				if (data.body && data.body.data) {
+					return data.body.data;
+				} else {
+					return true;
+				}
+			} else {
+				return undefined;
+			}
+		},
+		GPIO: function(data, interactData) {
+			if (data.pinNumber && data.pinNumber == interactData.pinNumber) {
 				if (data.body && data.body.data) {
 					return data.body.data;
 				} else {
@@ -361,6 +374,40 @@ function runTrigger(extension, type, data) { // Other extensions can call the tr
 	}
 }
 
+var gpioInputs = [];
+function processGpioTriggers() {
+	var activePins = [];
+	var extension = "interact";
+	var type = "GPIO";
+	
+	if (debug) console.log("##########################Starting processing gpio inputs");
+	
+	//first, clear out all watched gpio inputs
+	gpioInputs.forEach(gpioInput => {
+		gpioInput.unwatchAll();
+	});
+	gpioInputs = [];
+	
+	for (i in settings.interactions[extension][type]) {
+		(function (j) {
+		    if (settings.interactions[extension][type][j].actions) {
+				var pinNumber = parseInt(settings.interactions[extension][type][i].triggerData.pinNumber);
+				if (debug) console.log("process pinnumber "+pinNumber);
+				if (activePins.indexOf(pinNumber) === -1) {
+					var gpioInput = new Gpio(pinNumber, 'in', 'falling', {debounceTimeout: 100});
+					gpioInputs.push(gpioInput);
+					
+					gpioInput.watch((err, value) => {
+						const pin = pinNumber;
+						if (debug) console.log("gpio input "+pin+" hit "+value+","+(typeof this));
+						runTrigger(extension, type, {pinNumber: pin});
+					});
+				}
+				activePins.push(pinNumber);
+			}
+		})(i);
+	}
+}
 
 
 module.exports = {

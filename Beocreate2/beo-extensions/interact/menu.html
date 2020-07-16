@@ -189,6 +189,20 @@
 			<div class="button pill grey cancel" onclick="beo.ask();">Cancel</div>
 		</div>
 	</div>
+	
+	<div class="ask-menu" id="gpio-input-setup">
+		<h2>GPIO input received</h2>
+		<p>Run actions when following GPIO is activated: </p>
+		<p><strong>Pin <span class="light" id="gpio-input-received-pin">???</span></strong></p>
+		<div class="menu-item" onclick="interact.GPIOSetup('received', 'set');">
+			<div class="menu-label">Pin Number</div>
+			<div class="menu-value button" id="gpio-input-received-pin-set">Set...</div>
+		</div>
+		<div class="ask-buttons">
+			<div class="button pill black default disabled" onclick="interact.GPIOSetup('received', 'save');" id="gpio-input-save">Save Trigger</div>
+			<div class="button pill grey cancel" onclick="beo.ask();">Cancel</div>
+		</div>
+	</div>
 </div>
 
 <div class="menu-screen" id="serial-port" data-parent-extension="interact" data-menu-title="Serial Port">
